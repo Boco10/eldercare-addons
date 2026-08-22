@@ -1,0 +1,41 @@
+configuration:
+  cloud_api_url:
+    name: Backend address
+    description: >-
+      Where this add-on sends data. Leave the default unless you self-host the
+      backend. After changing it you have to pair again: open the add-on, press
+      Pair, and enter the code shown in the caregiver portal.
+  send_daily_features:
+    name: Send the daily summary
+    description: >-
+      Uploads one summary per day (wake-up time, number of kitchen visits, and
+      similar counts) — no raw sensor readings. This is what the resident's
+      habits are learned from. Turn it off and the portal stops learning.
+  image_upload_mode:
+    name: When a camera snapshot may leave the house
+    description: >-
+      Default is "critical_only": a picture is uploaded only for a critical
+      alert, such as a confirmed fall. "never" keeps every image inside the
+      house; "always" uploads on every analysis. Local alerting works in all
+      four modes — it never waits for the cloud.
+  send_raw_events:
+    name: Send raw events as well
+    description: >-
+      Off by default, and it is worth leaving off. Raw events include which
+      entity fired and when, so they can identify rooms and habits in detail.
+      Without this the backend sees only interpreted events ("kitchen
+      activity"), which is enough for everything the portal does. Turn it on
+      only for debugging, and turn it back off afterwards.
+  local_raw_retention_days:
+    name: Keep raw data for (days)
+    description: >-
+      Raw sensor readings are deleted from the add-on's own database after this
+      many days. Interpreted events and daily summaries are not affected.
+      Shorter is safer, longer helps when you want to replay an old day.
+  log_level:
+    name: Log detail
+    description: >-
+      "info" is right for everyday use. Use "debug" while chasing a problem —
+      it writes a lot, so switch back afterwards. The log is in the add-on's Log
+      tab.
+network: {}

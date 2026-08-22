@@ -1,0 +1,70 @@
+name: ElderCare AI
+slug: eldercare_ai
+version: "0.1.5"
+description: Learns daily routines and flags unusual changes for elderly care
+url: https://github.com/Boco10/eldercare-addons
+arch:
+  - aarch64
+  - amd64
+
+# Ami itt NINCS, az sem véletlen. A `startup`, `boot`, `hassio_role`,
+# `auth_api`, `apparmor` és `ingress_port` alapértéke pontosan az, amit
+# szeretnénk, és a hivatalos add-on linter hibaként jelzi a fölösleges
+# kiírásukat: egy kiírt alapérték azt sugallja, hogy döntés van mögötte, és
+# eltakarja azt a néhány sort, ahol tényleg van.
+#
+# Az élességet ez nem befolyásolja: az apparmor.txt jelenléte miatt az AppArmor
+# profil továbbra is érvényes, az Ingress pedig a 8099-en fut.
+
+# KÖTELEZŐ az s6-overlay v3 miatt: enélkül a Docker saját init folyamata lenne a
+# PID 1, és az s6 "can only run as pid 1" hibával azonnal leáll. A hivatalos doksi
+# is előírja: "Starting in V3 of S6 setting this to false is required".
+init: false
+
+# Ingress: a HA login véd, nincs saját jelszó (docs/02-ADDON.md §4)
+ingress: true
+ingress_stream: true
+panel_icon: mdi:account-heart
+panel_title: ElderCare
+
+# Legkisebb szükséges jogosultság
+hassio_api: true
+homeassistant_api: true
+
+# MQTT opcionális, de erősen ajánlott (eredmények visszapublikálása HA-ba)
+services:
+  - mqtt:want
+
+# A /data volume automatikusan mountolódik — NEM kell `map:` bejegyzés.
+#
+# Az `image:` sor SZÁNDÉKOSAN hiányzik. Enélkül a Supervisor a forrásból buildel,
+# ami a helyi telepítésnek és a fejlesztésnek is a jó viselkedés. Ha valaha
+# előre épített image-re váltunk, ide kerül — de akkor a fejlesztői telepítés
+# némán a publikált verziót húzná le a helyi kód helyett, ezért nem alapértelmezés:
+#image: ghcr.io/Boco10/eldercare-{arch}
+
+# Csak az van itt, ami ITT is hat. A Supervisor beállítólapja nem fér hozzá a
+# felderített entitásokhoz (azok a bővítmény saját felületén állíthatók), és nem
+# ő dönti el, mi a rendellenes (azt a gondozó írja le a portál szabálykönyvében).
+# Négy régi opció — tanulási időszak, minimális adatminőség, két anomália-küszöb —
+# az A14 architektúraváltás óta nem csinált semmit: a döntés a backendre került.
+# Kikerültek, mert egy hatástalan csúszka rosszabb, mint a hiánya: azt hinnéd,
+# beállítottad.
+#
+# A sorrend szándékos, ez a lap tetejétől lefelé olvasható:
+#   1. kapcsolat  2. mit lát a felhő  3. mennyi ideig tároljuk  4. hibakeresés
+options:
+  cloud_api_url: https://api.eldercare.example.com
+  send_daily_features: true
+  image_upload_mode: critical_only
+  send_raw_events: false
+  local_raw_retention_days: 30
+  log_level: info
+
+schema:
+  cloud_api_url: url
+  send_daily_features: bool
+  image_upload_mode: list(never|critical_only|on_request|always)
+  send_raw_events: bool
+  local_raw_retention_days: int(1,365)
+  log_level: list(trace|debug|info|notice|warning|error|fatal)

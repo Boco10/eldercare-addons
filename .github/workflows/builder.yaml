@@ -1,0 +1,47 @@
+name: Build add-on images
+
+# Csak címkézett kiadásnál épül image. A Supervisor a helyi telepítésnél
+# magától buildel a forrásból (a config.yaml-ben szándékosan nincs `image:`),
+# tehát a felhasználónak enélkül is működik minden — ez a publikált,
+# előre épített változat.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, amd64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read add-on version
+        id: meta
+        run: |
+          version=$(grep '^version:' eldercare_ai/config.yaml | cut -d'"' -f2)
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --${{ matrix.arch }} \
+            --target /data/eldercare_ai \
+            --image eldercare-{arch} \
+            --docker-hub ghcr.io/${{ github.repository_owner }} \
+            --addon

@@ -1,0 +1,12 @@
+{
+  "file": "no_activity.jsonl",
+  "catalog_version": 1,
+  "expected_alert_level": "high",
+  "expected_reasons": [
+    "prolonged_inactivity",
+    "inactivity_unusual_location"
+  ],
+  "min_risk_score": 0.82,
+  "max_risk_score": 1.0,
+  "requires_cloud": false
+}

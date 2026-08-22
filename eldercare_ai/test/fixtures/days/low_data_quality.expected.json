@@ -1,0 +1,12 @@
+{
+  "file": "low_data_quality.jsonl",
+  "catalog_version": 1,
+  "expected_alert_level": "info",
+  "expected_reasons": [
+    "insufficient_data"
+  ],
+  "min_risk_score": 0.0,
+  "max_risk_score": 0.3,
+  "requires_cloud": false,
+  "note": "NEGATÍV TESZT: alacsony adatminőségnél 'nem elegendő adat', nem következtetés."
+}

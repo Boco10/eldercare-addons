@@ -1,0 +1,32 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+#
+# s6 finish script: az app leállásakor fut.
+#
+# Ha az app nem 0-val (rendes leállás) vagy 256-tal (jelzésre leállás) lép ki,
+# a teljes konténer álljon le, hogy a Supervisor újraindíthassa — ne maradjon
+# "félig futó" állapotban, ahol a riasztási útvonal némán halott.
+#
+# MEGJEGYZÉS: nem execlineb + s6-test, mert az s6-overlay v3-ban az `s6-test`
+# már nem elérhető ("unable to spawn s6-test"). Bash + létező-bináris ellenőrzés.
+
+declare exit_code="${1:-0}"
+
+if [[ "${exit_code}" -eq 0 ]] || [[ "${exit_code}" -eq 256 ]]; then
+  bashio::log.info "ElderCare AI stopped cleanly (code: ${exit_code})."
+  exit 0
+fi
+
+bashio::log.warning "ElderCare AI stopped unexpectedly (code: ${exit_code}) — halting the container."
+
+if [[ -w /run/s6-linux-init-container-results/exitcode ]]; then
+  echo "${exit_code}" > /run/s6-linux-init-container-results/exitcode
+fi
+
+if [[ -x /run/s6/basedir/bin/halt ]]; then
+  exec /run/s6/basedir/bin/halt          # s6-overlay v3
+elif command -v s6-svscanctl > /dev/null; then
+  exec s6-svscanctl -t /var/run/s6/services   # s6-overlay v2
+fi
+
+exit "${exit_code}"

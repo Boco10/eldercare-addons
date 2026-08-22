@@ -1,0 +1,39 @@
+name: Lint and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # A Home Assistant hivatalos add-on ellenőrzése: config.yaml séma, kötelező
+  # mezők, elavult kulcsok. Ez fogja meg azt, ami csak telepítéskor derülne ki.
+  hassfest:
+    name: Add-on config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: frenck/action-addon-linter@v2
+        with:
+          path: "./eldercare_ai"
+
+  test:
+    name: Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          pip install --upgrade pip
+          pip install -r eldercare_ai/requirements.txt \
+                      -r eldercare_ai/requirements-dev.txt ruff
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: Tests
+        run: python -m pytest -q

@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ElderCare AI</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 1.5rem; line-height: 1.5;
+           max-width: 1200px; }
+    h1 { font-size: 1.4rem; margin: 0; }
+    h2 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
+    .topbar { display: flex; justify-content: space-between; align-items: center;
+              gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .card { border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+            border-radius: 10px; padding: 1rem; }
+    .card h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em;
+               opacity: .7; margin: 0 0 .6rem; }
+    dl { display: grid; grid-template-columns: auto 1fr; gap: .3rem .8rem; margin: 0; }
+    dt { opacity: .7; } dd { margin: 0; font-variant-numeric: tabular-nums; }
+    .ok { color: #17803d; } .warn { color: #b45309; } .err { color: #b91c1c; }
+    button { padding: .45rem .8rem; border-radius: 8px; border: 1px solid currentColor;
+             background: transparent; color: inherit; cursor: pointer; font: inherit; }
+    button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+    button:disabled { opacity: .5; cursor: default; }
+    .scroll { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: .92rem;
+            table-layout: fixed; min-width: 60rem; }
+    th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid
+             color-mix(in srgb, currentColor 15%, transparent); vertical-align: middle; }
+    th { font-weight: 600; opacity: .75; font-size: .8rem; text-transform: uppercase; }
+    /* Fixed widths: without them a long entity_id squeezes the note column flat. */
+    col.c-entity { width: 22%; } col.c-state { width: 9%; }
+    col.c-meaning { width: 13%; } col.c-room { width: 12%; }
+    col.c-device { width: 12%; } col.c-send { width: 4.5rem; }
+    col.c-note { width: 16%; } col.c-status { width: 6.5rem; }
+    col.c-save { width: 5.5rem; }
+    td code { word-break: break-all; }
+    select, input[type=text], input[type=number] {
+             font: inherit; padding: .3rem; border-radius: 6px;
+             border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+             background: transparent; color: inherit; max-width: 11rem; }
+    table input[type=text], table select { width: 100%; max-width: none; }
+    /* Group heading inside the table */
+    tr.group td { background: color-mix(in srgb, currentColor 8%, transparent);
+                  font-weight: 600; font-size: .78rem; text-transform: uppercase;
+                  letter-spacing: .04em; opacity: .8; }
+    /* Live view: fixed height, so arriving rows do not make the page jump. */
+    .feed-box { max-height: 20rem; overflow-y: auto; }
+    table.feed { min-width: 0; font-size: .85rem; }
+    table.feed th, table.feed td { padding: .3rem .4rem; }
+    table.feed td.skipped { opacity: .55; }
+    .feed-new { animation: flash 1.2s ease-out; }
+    @keyframes flash { from { background: color-mix(in srgb, #2563eb 30%, transparent); } }
+    .tabs { display: flex; gap: .4rem; flex-wrap: wrap; margin: .6rem 0 .8rem; }
+    .tabs button { border-radius: 99px; }
+    .tabs button[aria-selected=true] { background: #2563eb; border-color: #2563eb;
+                                       color: #fff; }
+    tr.pending { background: color-mix(in srgb, #b45309 8%, transparent); }
+    tr.ignored td { opacity: .5; }
+    tr.ignored td:last-child { opacity: 1; }
+    button.link { background: none; border: none; padding: .2rem 0; text-decoration: underline;
+                  opacity: .7; font-size: .82rem; cursor: pointer; }
+    button.link:hover { opacity: 1; }
+    .badge { font-size: .72rem; padding: .1rem .45rem; border-radius: 99px;
+             border: 1px solid currentColor; white-space: nowrap; }
+    .muted { opacity: .6; font-size: .85rem; }
+    noscript { display: block; padding: .8rem; border-radius: 8px;
+               border: 1px solid currentColor; margin-bottom: 1rem; }
+    .row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+    #lang { max-width: 8rem; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>ElderCare AI</h1>
+    <select id="lang" aria-label="Language"></select>
+  </div>
+
+  <noscript data-i18n="app.noscript"></noscript>
+
+  <div class="grid">
+    <div class="card">
+      <h3 data-i18n="card.connections"></h3>
+      <dl>
+        <dt data-i18n="conn.ha"></dt><dd id="ha">…</dd>
+        <dt data-i18n="conn.mode"></dt><dd id="mode">…</dd>
+        <dt data-i18n="conn.cloud"></dt><dd id="cloud">…</dd>
+        <dt data-i18n="conn.paired"></dt><dd id="paired">…</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="card.data"></h3>
+      <dl>
+        <dt data-i18n="data.raw"></dt><dd id="raw">…</dd>
+        <dt data-i18n="data.semantic"></dt><dd id="sem">…</dd>
+        <dt data-i18n="data.queue"></dt><dd id="queue">…</dd>
+        <dt data-i18n="data.mapped"></dt><dd id="mapped">…</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="card.privacy"></h3>
+      <p><label><span data-i18n="privacy.image_mode"></span>
+        <select id="p-image" style="width:100%;max-width:none">
+          <option value="never" data-i18n="privacy.mode.never"></option>
+          <option value="critical_only" data-i18n="privacy.mode.critical_only"></option>
+          <option value="on_request" data-i18n="privacy.mode.on_request"></option>
+          <option value="always" data-i18n="privacy.mode.always"></option>
+        </select>
+      </label></p>
+      <p><label><input type="checkbox" id="p-features">
+        <span data-i18n="privacy.send_features"></span></label></p>
+      <p><label><input type="checkbox" id="p-raw">
+        <span data-i18n="privacy.send_raw"></span></label></p>
+      <p><label><span data-i18n="privacy.retention"></span>
+        <input type="number" id="p-retention" min="1" max="365" style="width:100%;max-width:none">
+      </label></p>
+      <p class="row"><button id="p-save" class="primary" data-i18n="privacy.save"></button></p>
+      <p id="p-msg" class="muted"></p>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="card.diagnostics"></h3>
+      <p class="row">
+        <button id="test" class="primary" data-i18n="diag.test_alert"></button>
+        <button id="export" data-i18n="diag.export"></button>
+      </p>
+      <p id="test-result" class="muted"></p>
+    </div>
+  </div>
+
+  <h2 data-i18n="pairing.title"></h2>
+  <div class="card"><div id="pairing-body" class="muted" data-i18n="pairing.loading"></div></div>
+
+  <h2 data-i18n="analysis.title"></h2>
+  <p class="muted" data-i18n="analysis.intro"></p>
+
+  <div class="grid">
+    <div class="card">
+      <h3 data-i18n="analysis.camera"></h3>
+      <p class="row">
+        <select id="camera-select"></select>
+        <button id="preview" data-i18n="analysis.preview"></button>
+      </p>
+      <p id="camera-note" class="muted"></p>
+      <img id="snapshot" alt="" style="display:none; max-width:100%; border-radius:8px;
+           border:1px solid color-mix(in srgb, currentColor 20%, transparent)">
+    </div>
+
+    <div class="card" style="grid-column: span 2;">
+      <h3 data-i18n="analysis.title"></h3>
+      <p class="row">
+        <button id="analyze" class="primary" data-i18n="analysis.run"></button>
+      </p>
+      <div id="analysis-result" class="muted" data-i18n="analysis.none_yet"></div>
+    </div>
+  </div>
+
+  <h2 data-i18n="feed.title"></h2>
+  <p class="muted" data-i18n="feed.intro"></p>
+
+  <div class="row" style="margin-bottom:.6rem">
+    <button id="feed-toggle"></button>
+    <input type="text" id="feed-filter" data-i18n-placeholder="feed.filter_placeholder"
+           style="max-width:16rem">
+    <span class="muted" id="feed-summary"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3 data-i18n="feed.states_title"></h3>
+      <div class="scroll feed-box">
+        <table class="feed">
+          <thead>
+            <tr>
+              <th data-i18n="feed.col_time"></th>
+              <th data-i18n="feed.col_entity"></th>
+              <th data-i18n="feed.col_change"></th>
+              <th data-i18n="feed.col_processed"></th>
+            </tr>
+          </thead>
+          <tbody id="feed-states">
+            <tr><td colspan="4" class="muted" data-i18n="entities.loading"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 data-i18n="feed.events_title"></h3>
+      <div class="scroll feed-box">
+        <table class="feed">
+          <thead>
+            <tr>
+              <th data-i18n="feed.col_time"></th>
+              <th data-i18n="feed.col_type"></th>
+              <th data-i18n="feed.col_room"></th>
+              <th data-i18n="feed.col_synced"></th>
+            </tr>
+          </thead>
+          <tbody id="feed-events">
+            <tr><td colspan="4" class="muted" data-i18n="entities.loading"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <h2 data-i18n="entities.title"></h2>
+  <p class="muted" id="mapping-hint" data-i18n="entities.intro"></p>
+
+  <div class="tabs" id="entity-tabs" role="tablist"></div>
+
+  <div class="scroll">
+    <table>
+      <colgroup>
+        <col class="c-entity"><col class="c-state"><col class="c-meaning">
+        <col class="c-room"><col class="c-device"><col class="c-send">
+        <col class="c-note"><col class="c-status"><col class="c-save">
+      </colgroup>
+      <thead>
+        <tr>
+          <th data-i18n="entities.col_entity"></th>
+          <th data-i18n="entities.col_state"></th>
+          <th data-i18n="entities.col_meaning"></th>
+          <th data-i18n="entities.col_room"></th>
+          <th data-i18n="entities.col_device"></th>
+          <th data-i18n="entities.col_send" data-i18n-title="entities.send_hint"></th>
+          <th data-i18n="entities.col_note" data-i18n-title="entities.note_hint"></th>
+          <th data-i18n="entities.col_status"></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="entities">
+        <tr><td colspan="9" class="muted" data-i18n="entities.loading"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="./i18n.js"></script>
+  <script>
+    // Every path is RELATIVE — Ingress serves us under a runtime prefix.
+    const $ = (id) => document.getElementById(id);
+    const set = (id, text, cls) => {
+      const el = $(id); el.textContent = text; if (cls !== undefined) el.className = cls;
+    };
+    let roles = [];
+
+    // ------------------------------------------------------------- language
+
+    (function initLanguage() {
+      const select = $('lang');
+      select.innerHTML = Object.entries(LANGUAGES)
+        .map(([code, label]) => `<option value="${code}">${label}</option>`).join('');
+      select.value = getLanguage();
+      select.addEventListener('change', () => setLanguage(select.value));
+      document.documentElement.lang = getLanguage();
+    })();
+
+    // After a language change the dynamic parts have to be redrawn too: those
+    // are filled by JavaScript, not by the data-i18n attribute.
+    document.addEventListener('languagechange', () => {
+      $('lang').value = getLanguage();
+      refreshStatus(); refreshEntities(); refreshCameras(); refreshPrivacy(); refreshPairing();
+      paintFeedToggle(); refreshFeed();
+      $('feed-filter').placeholder = t('feed.filter_placeholder');
+    });
+
+    // --------------------------------------------------------------- status
+
+    async function refreshStatus() {
+      try {
+        const s = await (await fetch('./api/status')).json();
+        // Follow Home Assistant's language unless the user picked one here.
+        // A Hungarian install should not force English on a caregiver who may
+        // not read it.
+        applyHomeAssistantLanguage(s.ha_language);
+        set('ha', t(s.ha_connected ? 'conn.connected' : 'conn.disconnected'),
+            s.ha_connected ? 'ok' : 'err');
+        set('mode', s.ha_mode, '');
+        set('cloud', t(s.cloud_offline ? 'conn.offline' : 'conn.online'),
+            s.cloud_offline ? 'warn' : 'ok');
+        set('paired', t(s.paired ? 'conn.yes' : 'conn.no'), s.paired ? 'ok' : 'warn');
+        set('raw', s.counts.raw_states, '');
+        set('sem', s.counts.semantic_events, '');
+        set('queue', s.counts.sync_queue, '');
+        set('mapped', s.mapped_entities ?? 0, '');
+      } catch (e) { set('ha', t('conn.status_unavailable'), 'err'); }
+    }
+
+    // -------------------------------------------------------------- privacy
+
+    async function refreshPrivacy() {
+      let p;
+      try { p = await (await fetch('./api/privacy')).json(); } catch (e) { return; }
+      $('p-image').value = p.image_upload_mode;
+      $('p-features').checked = p.send_daily_features;
+      $('p-raw').checked = p.send_raw_events;
+      $('p-retention').value = p.local_raw_retention_days;
+      $('p-msg').textContent =
+        t(p.supervisor_managed ? 'privacy.supervisor_note' : 'privacy.local_note');
+    }
+
+    $('p-save').addEventListener('click', async () => {
+      $('p-save').disabled = true;
+      $('p-msg').textContent = t('privacy.saving');
+      try {
+        const response = await fetch('./api/privacy', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_upload_mode: $('p-image').value,
+            send_daily_features: $('p-features').checked,
+            send_raw_events: $('p-raw').checked,
+            local_raw_retention_days: Number($('p-retention').value),
+          }),
+        });
+        const r = await response.json();
+        if (!response.ok) $('p-msg').innerHTML = `<span class="err">${r.error}</span>`;
+        else {
+          $('p-msg').innerHTML = `<span class="ok">${t('privacy.saved')}</span>`;
+          refreshCameras();
+        }
+      } catch (e) {
+        $('p-msg').innerHTML = `<span class="err">${t('privacy.save_failed')}</span>`;
+      } finally { $('p-save').disabled = false; }
+    });
+
+    // -------------------------------------------------------------- pairing
+
+    async function refreshPairing() {
+      let p;
+      try { p = await (await fetch('./api/pairing')).json(); }
+      catch (e) { $('pairing-body').textContent = t('conn.status_unavailable'); return; }
+
+      if (p.paired) {
+        $('pairing-body').innerHTML = `
+          <p><span class="badge ok">${t('pairing.paired')}</span>
+             ${p.home_id ? `· ${t('pairing.home')}: <code>${p.home_id}</code>` : ''}</p>
+          <p class="muted">${t('pairing.installation')}: <code>${p.installation_id}</code></p>
+          <p class="row"><button id="unpair">${t('pairing.unpair')}</button></p>
+          <p class="muted">${t('pairing.unpair_note')}</p>`;
+        $('unpair').addEventListener('click', async () => {
+          if (!confirm(t('pairing.unpair_confirm'))) return;
+          await fetch('./api/pairing/unpair', { method: 'POST' });
+          refreshPairing(); refreshStatus();
+        });
+        return;
+      }
+
+      const code = p.pending_code;
+      $('pairing-body').innerHTML = `
+        <p><span class="badge warn">${t('pairing.not_paired')}</span>
+           · ${t('pairing.backend')}: <code>${p.cloud_api_url}</code></p>
+        <p class="muted">${t('pairing.installation')}: <code>${p.installation_id}</code></p>
+        <ol class="muted" style="padding-left:1.2rem">
+          <li>${t('pairing.step1')}</li><li>${t('pairing.step2')}</li><li>${t('pairing.step3')}</li>
+        </ol>
+        ${code ? `<p>${t('pairing.code')}: <strong style="font-size:1.4rem;letter-spacing:.1em">${code}</strong>
+                  <span class="muted">(${t('pairing.expires')}: ${new Date(p.code_expires_at).toLocaleTimeString()})</span></p>` : ''}
+        <p class="row"><button id="get-code" class="primary">${
+          code ? t('pairing.new_code') : t('pairing.get_code')}</button></p>
+        <p class="row">
+          <!-- The device token is a credential: it must not sit readable on the
+               screen. type=password hides it from anyone looking over a
+               shoulder or watching a screen share, and autocomplete=off keeps
+               the browser from remembering it. -->
+          <input type="password" id="token-input" placeholder="eld_…"
+                 autocomplete="off" spellcheck="false" style="max-width:26rem">
+          <button id="token-reveal" class="link" type="button"
+                  title="${t('pairing.reveal')}">${t('pairing.reveal')}</button>
+          <button id="save-token">${t('pairing.save_token')}</button>
+        </p>
+        <p id="pairing-msg" class="muted"></p>`;
+
+      $('get-code').addEventListener('click', async () => {
+        $('get-code').disabled = true;
+        const r = await (await fetch('./api/pairing/code', { method: 'POST' })).json();
+        if (!r.ok) $('pairing-msg').innerHTML = `<span class="err">${r.error}</span>`;
+        else refreshPairing();
+        $('get-code').disabled = false;
+      });
+
+      // Show it only while the user asks — mistyping a 40-character token is
+      // easy, and a hidden field with no way to check it is its own trap.
+      $('token-reveal').addEventListener('click', () => {
+        const field = $('token-input');
+        const hidden = field.type === 'password';
+        field.type = hidden ? 'text' : 'password';
+        $('token-reveal').textContent = t(hidden ? 'pairing.hide' : 'pairing.reveal');
+      });
+
+      $('save-token').addEventListener('click', async () => {
+        const field = $('token-input');
+        const value = field.value.trim();
+        if (!value) return;
+        $('save-token').disabled = true;
+        $('pairing-msg').textContent = t('pairing.checking');
+        const r = await (await fetch('./api/pairing/token', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_token: value }),
+        })).json();
+        // Clear it either way: on success the panel redraws anyway, and on
+        // failure a rejected token has no business staying on screen.
+        field.value = '';
+        field.type = 'password';
+        if (r.ok) { refreshPairing(); refreshStatus(); }
+        else $('pairing-msg').innerHTML = `<span class="err">${r.error}</span>`;
+        $('save-token').disabled = false;
+      });
+    }
+
+    // --------------------------------------------------------------- camera
+
+    async function refreshCameras() {
+      let data;
+      try { data = await (await fetch('./api/cameras')).json(); } catch (e) { return; }
+      const select = $('camera-select');
+      select.innerHTML = `<option value="">${t('analysis.no_image')}</option>` +
+        (data.cameras || []).map(c =>
+          `<option value="${c.entity_id}"${c.available ? '' : ' disabled'}>${c.name}${
+            c.available ? '' : ` (${t('camera.unavailable')})`}</option>`).join('');
+
+      $('camera-note').innerHTML = !data.cameras.length
+        ? t('camera.none')
+        : t(data.upload_allowed_manual ? 'camera.upload_allowed' : 'camera.upload_blocked',
+            { mode: data.image_upload_mode });
+    }
+
+    $('preview').addEventListener('click', () => {
+      const camera = $('camera-select').value;
+      const img = $('snapshot');
+      if (!camera) { img.style.display = 'none'; return; }
+      img.src = `./api/cameras/${encodeURIComponent(camera)}/snapshot?t=${Date.now()}`;
+      img.style.display = 'block';
+      img.onerror = () => {
+        img.style.display = 'none';
+        $('camera-note').textContent = t('camera.snapshot_failed');
+      };
+    });
+
+    // ------------------------------------------------------------- analysis
+
+    function renderAnalysis(r) {
+      if (!r.ok) {
+        $('analysis-result').innerHTML = `<span class="err">${r.summary || r.error}</span>`;
+        return;
+      }
+      const levelClass = { info: 'ok', low: 'ok', medium: 'warn',
+                           high: 'err', critical: 'err', unknown: 'muted' }[r.risk_level] || '';
+      const reasons = (r.reasons || []).length
+        ? `<p><strong>${t('analysis.reasons')}:</strong> ${r.reasons.join(', ')}</p>` : '';
+      const score = r.risk_score == null ? '' : ` · ${t('analysis.score')} ${r.risk_score}`;
+      const mock = r.is_mock ? ` <span class="badge warn">${t('analysis.mock')}</span>` : '';
+      $('analysis-result').innerHTML = `
+        <p><span class="badge ${levelClass}">${r.risk_level}</span>${score}${mock}</p>
+        <p>${r.summary || ''}</p>
+        ${reasons}
+        ${r.recommended_action ? `<p><strong>${t('analysis.action')}:</strong>
+           ${r.recommended_action}${r.urgency ? ` (${r.urgency})` : ''}</p>` : ''}
+        ${r.uncertainty_note ? `<p class="muted">${r.uncertainty_note}</p>` : ''}
+        <p class="muted">
+          ${r.sensors_sent ?? '?'} ${t('analysis.sensors_sent')} ·
+          ${r.events_sent ?? '?'} ${t('analysis.events_sent')} ·
+          ${t('analysis.image_analyzed')}: ${t(r.image_analyzed ? 'conn.yes' : 'conn.no')}
+          ${r.credits_used != null ? ` · ${r.credits_used} ${t('analysis.credits')}` : ''}
+          ${r.data_quality != null ? ` · ${t('analysis.quality')} ${r.data_quality}` : ''}
+        </p>`;
+    }
+
+    $('analyze').addEventListener('click', async () => {
+      $('analyze').disabled = true;
+      $('analysis-result').innerHTML = `<span class="muted">${t('analysis.running')}</span>`;
+      try {
+        const response = await fetch('./api/analyze', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ camera: $('camera-select').value || null }),
+        });
+        renderAnalysis(await response.json());
+      } catch (e) {
+        $('analysis-result').innerHTML = `<span class="err">${t('analysis.failed')}</span>`;
+      } finally { $('analyze').disabled = false; }
+    });
+
+    // ------------------------------------------------------------- live feed
+
+    // The live view answers one question: does a sensor reach the system at all?
+    // Without it, debugging shows only that "nothing happens" — which does not
+    // say whether the sensor is silent or the mapping is missing.
+    let feedRunning = true;
+    let feedSeen = new Set();
+
+    const clock = (iso) => {
+      const d = new Date(iso);
+      return isNaN(d) ? '' : d.toLocaleTimeString();
+    };
+
+    function feedRow(row, isNew) {
+      const reason = row.skip_reason
+        ? `<span class="badge muted">${t('feed.skip_' + row.skip_reason)}</span>`
+        : `<span class="badge ok">${escapeHtml(row.role || '—')}</span>`;
+      const change = row.previous_state
+        ? `${escapeHtml(row.previous_state)} → <strong>${escapeHtml(row.state)}</strong>`
+        : `<strong>${escapeHtml(row.state)}</strong>`;
+      return `<tr class="${isNew ? 'feed-new' : ''}">
+        <td class="muted">${clock(row.timestamp)}</td>
+        <td class="${row.processed ? '' : 'skipped'}"><code>${escapeHtml(row.entity_id)}</code></td>
+        <td>${change}</td>
+        <td>${reason}</td>
+      </tr>`;
+    }
+
+    async function refreshFeed() {
+      if (!feedRunning) return;
+      let data;
+      try { data = await (await fetch('./api/feed?limit=60')).json(); }
+      catch (e) { return; }
+
+      const needle = $('feed-filter').value.trim().toLowerCase();
+      const match = (text) => !needle || String(text || '').toLowerCase().includes(needle);
+
+      const states = (data.states || []).filter(r => match(r.entity_id));
+      const fresh = new Set(states.map(r => r.timestamp + r.entity_id));
+      $('feed-states').innerHTML = states.length
+        ? states.map(r => feedRow(r, !feedSeen.has(r.timestamp + r.entity_id))).join('')
+        : `<tr><td colspan="4" class="muted">${t('feed.no_states')}</td></tr>`;
+      // On the first load everything would count as "new" — a wall of flashing.
+      feedSeen = feedSeen.size ? fresh : fresh;
+
+      const events = (data.events || []).filter(e => match(e.type) || match(e.room));
+      $('feed-events').innerHTML = events.length
+        ? events.map(e => `<tr>
+            <td class="muted">${clock(e.timestamp)}</td>
+            <td><strong>${escapeHtml(e.type)}</strong>
+                <span class="muted">${escapeHtml(e.class)}</span></td>
+            <td>${escapeHtml(e.room || '—')}</td>
+            <td>${e.synced ? `<span class="badge ok">${t('feed.sent')}</span>`
+                           : `<span class="badge warn">${t('feed.local_only')}</span>`}</td>
+          </tr>`).join('')
+        : `<tr><td colspan="4" class="muted">${t('feed.no_events')}</td></tr>`;
+
+      const n = data.normalizer_stats || {};
+      $('feed-summary').textContent = t('feed.summary', {
+        states: data.totals?.raw_states ?? 0,
+        events: data.totals?.semantic_events ?? 0,
+        ignored: n.ignored ?? 0,
+      });
+    }
+
+    function paintFeedToggle() {
+      $('feed-toggle').textContent = feedRunning ? t('feed.pause') : t('feed.resume');
+    }
+
+    $('feed-toggle').addEventListener('click', () => {
+      feedRunning = !feedRunning;
+      paintFeedToggle();
+      if (feedRunning) refreshFeed();
+    });
+    $('feed-filter').addEventListener('input', refreshFeed);
+
+    // -------------------------------------------------------------- entities
+
+    function roleSelect(entityId, selected, extra = '') {
+      const options = roles.map(r =>
+        `<option value="${r}"${r === selected ? ' selected' : ''}>${r}</option>`).join('');
+      return `<select data-field="role"${extra}>${options}</select>`;
+    }
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
+    // A typical Home Assistant returns hundreds of sensors (updates, backups,
+    // sunrise). Tabs split them by entity type; inside a tab, role groups them.
+    let entityData = null;
+    let activeTab = null;
+
+    const IGNORED_TAB = '__ignored__';
+    const tabLabel = (name) => name === IGNORED_TAB ? t('entities.tab_ignored') : name;
+
+    function renderTabs() {
+      const domains = (entityData && entityData.domains) || [];
+      $('entity-tabs').innerHTML = domains.map(d =>
+        `<button role="tab" data-tab="${escapeHtml(d.domain)}" aria-selected="${
+          d.domain === activeTab}">${escapeHtml(tabLabel(d.domain))} (${d.total})${
+          d.pending ? ` <span class="badge warn">${d.pending}</span>` : ''}</button>`).join('');
+    }
+
+    function renderEntities() {
+      const body = $('entities');
+      if (!entityData) return;
+
+      const visible = (entityData.entities || []).filter(e => e.tab === activeTab);
+      if (!visible.length) {
+        body.innerHTML =
+          `<tr><td colspan="9" class="muted">${t('entities.tab_empty')}</td></tr>`;
+        return;
+      }
+
+      // Grouped by role: every presence or door sensor sits together, so a room
+      // missing from the list stands out.
+      let lastGroup = null;
+      body.innerHTML = visible.map(e => {
+        const m = e.mapping;
+        const role = m ? m.role : e.suggestion.role;
+        const room = (m ? m.room : e.suggestion.room) || '';
+        const appliance = (m ? m.appliance : e.suggestion.appliance) || '';
+        const note = m ? (m.note || '') : '';
+        const confirmed = m && m.confirmed;
+        const ignored = e.group === 'ignored';
+        // On by default: someone confirming a mapping wants it to be sent.
+        const enabled = m ? m.enabled : true;
+        const status = ignored
+          ? `<span class="badge muted">${t('entities.not_needed')}</span>`
+          : !confirmed
+            ? `<span class="badge warn">${t('entities.suggestion')}</span>`
+            : enabled
+              ? `<span class="badge ok">${t('entities.sent')}</span>`
+              : `<span class="badge muted">${t('entities.skipped')}</span>`;
+
+        // A set-aside row offers exactly one action: put it back. Editing the
+        // other fields would be misleading — nothing would come of it.
+        const actions = ignored
+          ? `<button data-action="restore">${t('entities.restore')}</button>`
+          : `<button data-action="save">${t('entities.save')}</button>
+             <button data-action="ignore" title="${t('entities.not_needed_hint')}"
+                     class="link">${t('entities.not_needed')}</button>`;
+
+        let header = '';
+        if (role !== lastGroup) {
+          lastGroup = role;
+          const label = role === 'unknown' ? t('entities.group_unknown') : role;
+          header = `<tr class="group"><td colspan="9">${escapeHtml(label)}</td></tr>`;
+        }
+
+        const off = ignored ? ' disabled' : '';
+        return `${header}<tr class="${ignored ? 'ignored' : confirmed ? '' : 'pending'}"
+                     data-entity="${escapeHtml(e.entity_id)}">
+          <td><code>${escapeHtml(e.entity_id)}</code><br>
+              <span class="muted">${escapeHtml(e.name)}</span></td>
+          <td class="muted" title="${escapeHtml(e.state_full)}">${escapeHtml(e.state)}</td>
+          <td>${roleSelect(e.entity_id, role, off)}</td>
+          <td><input type="text" data-field="room" value="${escapeHtml(room)}"${off}
+                     placeholder="${t('entities.room_placeholder')}"></td>
+          <td><input type="text" data-field="appliance" value="${escapeHtml(appliance)}"${off}
+                     placeholder="—"></td>
+          <td><input type="checkbox" data-field="enabled" ${enabled ? 'checked' : ''}${off}
+                     title="${t('entities.send_hint')}"></td>
+          <td><input type="text" data-field="note" value="${escapeHtml(note)}"${off}
+                     maxlength="500" placeholder="${t('entities.note_placeholder')}"
+                     title="${t('entities.note_hint')}"></td>
+          <td>${status}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function refreshEntities() {
+      try { entityData = await (await fetch('./api/entities')).json(); }
+      catch (e) {
+        $('entities').innerHTML =
+          `<tr><td colspan="9" class="err">${t('entities.load_failed')}</td></tr>`;
+        return;
+      }
+
+      roles = entityData.roles || [];
+      if (!entityData.entities || !entityData.entities.length) {
+        $('entities').innerHTML =
+          `<tr><td colspan="9" class="muted">${t('entities.empty')}</td></tr>`;
+        return;
+      }
+
+      // On the first load, open the tab that actually needs attention — but
+      // never override the user's own choice on a refresh.
+      const domains = entityData.domains || [];
+      if (!domains.some(d => d.domain === activeTab)) {
+        const target = domains.find(d => d.pending) || domains[0];
+        activeTab = target ? target.domain : null;
+      }
+
+      renderTabs();
+      renderEntities();
+
+      $('mapping-hint').innerHTML = entityData.ready_for_learning
+        ? `<span class="ok">${t('entities.ready', { count: entityData.confirmed_count })}</span>`
+        : t('entities.not_ready', { count: entityData.confirmed_count });
+    }
+
+    $('entity-tabs').addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-tab]');
+      if (!button) return;
+      activeTab = button.dataset.tab;
+      renderTabs();
+      renderEntities();
+    });
+
+    document.addEventListener('click', async (event) => {
+      const button = event.target.closest(
+        'button[data-action="save"], button[data-action="ignore"], ' +
+        'button[data-action="restore"]');
+      if (!button) return;
+      const action = button.dataset.action;
+      const row = button.closest('tr');
+      const field = (name) => row.querySelector(`[data-field="${name}"]`);
+      button.disabled = true;
+      try {
+        // Putting back DELETES the entry rather than saving it as confirmed:
+        // otherwise a set-aside sensor would enter the pipeline with one click
+        // and no review. This way it becomes a suggestion again.
+        const response = action === 'restore'
+          ? await fetch(`./api/mappings/${encodeURIComponent(row.dataset.entity)}`,
+                        { method: 'DELETE' })
+          : await fetch('./api/mappings', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                entity_id: row.dataset.entity,
+                role: field('role').value,
+                room: field('room').value || null,
+                appliance: field('appliance').value || null,
+                enabled: field('enabled').checked,
+                note: field('note').value || null,
+                ignored: action === 'ignore',
+              }),
+            });
+        if (!response.ok) throw new Error(await response.text());
+        await refreshEntities();
+        await refreshStatus();
+      } catch (e) {
+        button.textContent = t('entities.error');
+      } finally { button.disabled = false; }
+    });
+
+    // ---------------------------------------------------------- diagnostics
+
+    $('test').addEventListener('click', async () => {
+      $('test').disabled = true;
+      set('test-result', t('diag.sending'), 'muted');
+      try {
+        const r = await (await fetch('./api/test-alert', { method: 'POST' })).json();
+        const list = Object.entries(r.channels || {})
+          .map(([name, ok]) => `${ok ? '✓' : '✗'} ${name}`).join(' · ');
+        set('test-result', r.triggered ? `${t('diag.sent')} — ${list}`
+                                       : (r.hint || t('diag.failed')),
+            r.triggered ? 'ok' : 'err');
+      } catch (e) { set('test-result', t('diag.test_failed'), 'err'); }
+      finally { $('test').disabled = false; }
+    });
+
+    $('export').addEventListener('click', async () => {
+      const data = await (await fetch('./api/mappings/export')).json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'eldercare-mapping.json';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+
+    applyTranslations();
+    paintFeedToggle();
+    refreshStatus(); refreshEntities(); refreshCameras(); refreshPrivacy(); refreshPairing();
+    refreshFeed();
+    setInterval(refreshStatus, 5000);
+    // The live view refreshes faster than the other panels — that is the point.
+    setInterval(refreshFeed, 3000);
+  </script>
+</body>
+</html>

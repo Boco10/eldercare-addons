@@ -1,0 +1,13 @@
+{
+  "_comment": "Minden opció kitöltve, engedékeny adatvédelmi beállításokkal.",
+  "log_level": "debug",
+  "cloud_api_url": "http://mock-cloud:8080",
+  "learning_period_days": 14,
+  "minimum_data_quality": 0.6,
+  "anomaly_threshold_medium": 0.55,
+  "anomaly_threshold_high": 0.75,
+  "send_raw_events": true,
+  "send_daily_features": true,
+  "image_upload_mode": "on_request",
+  "local_raw_retention_days": 90
+}

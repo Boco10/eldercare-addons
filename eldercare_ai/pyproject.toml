@@ -1,0 +1,22 @@
+[project]
+name = "eldercare-ai"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["test"]
+pythonpath = ["."]
+filterwarnings = ["error::RuntimeWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF", "S"]
+ignore = ["S101"]  # assert a tesztekben rendben van
+
+[tool.ruff.lint.per-file-ignores]
+"test/*" = ["S", "PLR2004"]

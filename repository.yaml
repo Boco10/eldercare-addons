@@ -1,0 +1,10 @@
+# Home Assistant add-on repository metadata.
+#
+# This file must sit at the ROOT of the public repository, next to the add-on
+# folders. Home Assistant reads it when a user adds the repository URL.
+#
+# The owner part of the URL is filled in at publish time by the release script;
+# do not hand-edit it here, or the two will drift apart.
+name: ElderCare Home Assistant Add-ons
+url: https://github.com/Boco10/eldercare-addons
+maintainer: Jozsef Bognar

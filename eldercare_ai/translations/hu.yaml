@@ -1,0 +1,42 @@
+configuration:
+  cloud_api_url:
+    name: Backend címe
+    description: >-
+      Ide küldi az adatot a bővítmény. Hagyd az alapértelmezetten, ha nem
+      üzemeltetsz saját backendet. Módosítás után újra kell párosítani: nyisd
+      meg a bővítményt, nyomd meg a Párosítás gombot, és írd be a gondozói
+      portálon megjelenő kódot.
+  send_daily_features:
+    name: Napi összesítő küldése
+    description: >-
+      Naponta egy összesítőt tölt fel (ébredés ideje, konyhai látogatások száma
+      és hasonló mennyiségek) — nyers szenzorérték nélkül. A lakó szokásai
+      ebből tanulódnak meg. Ha kikapcsolod, a portál nem tanul tovább.
+  image_upload_mode:
+    name: Mikor hagyhat el kamerakép a lakást
+    description: >-
+      Alapértelmezés a „csak kritikus": kép csak kritikus riasztáshoz kerül fel,
+      például megerősített esésnél. A „soha" minden képet a lakásban tart, a
+      „mindig" minden elemzéshez feltölt. A helyi riasztás mind a négy módban
+      működik — az soha nem vár a felhőre.
+  send_raw_events:
+    name: Nyers események küldése is
+    description: >-
+      Alapból kikapcsolva, és érdemes is úgy hagyni. A nyers esemény tartalmazza,
+      melyik entitás mikor jelzett, vagyis részletesen azonosítja a szobákat és a
+      szokásokat. Enélkül a backend csak értelmezett eseményt lát („konyhai
+      aktivitás"), ami mindenhez elég, amit a portál csinál. Csak hibakereséshez
+      kapcsold be, utána vissza.
+  local_raw_retention_days:
+    name: Nyers adat megőrzése (nap)
+    description: >-
+      Ennyi nap után a nyers szenzorértékek törlődnek a bővítmény saját
+      adatbázisából. Az értelmezett eseményeket és a napi összesítőket ez nem
+      érinti. A rövidebb biztonságosabb, a hosszabb akkor jó, ha egy régi napot
+      újra le akarsz játszani.
+  log_level:
+    name: Napló részletessége
+    description: >-
+      Hétköznapi használatra az „info" a jó. A „debug" hibakereséshez való —
+      sokat ír, utána állítsd vissza. A napló a bővítmény Napló fülén látszik.
+network: {}

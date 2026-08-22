@@ -1,0 +1,9 @@
+{
+  "file": "normal_day.jsonl",
+  "catalog_version": 1,
+  "expected_alert_level": "info",
+  "expected_reasons": [],
+  "min_risk_score": 0.0,
+  "max_risk_score": 0.35,
+  "requires_cloud": false
+}

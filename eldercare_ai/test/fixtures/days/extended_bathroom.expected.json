@@ -1,0 +1,11 @@
+{
+  "file": "extended_bathroom.jsonl",
+  "catalog_version": 1,
+  "expected_alert_level": "low",
+  "expected_reasons": [
+    "extended_bathroom_stay"
+  ],
+  "min_risk_score": 0.35,
+  "max_risk_score": 0.7,
+  "requires_cloud": false
+}

@@ -1,0 +1,78 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+#
+# ElderCare AI indító — s6-overlay service script.
+# FIGYELEM: ez a fájl CSAK LF sorvéggel működik. CRLF esetén a hiba félrevezető:
+#   /usr/bin/with-contenv: no such file or directory
+
+set -e
+
+CONFIG_PATH=/data/options.json
+
+# A konfigurációt közvetlenül a /data/options.json-ből olvassuk, nem a
+# `bashio::config`-gal. Oka: a bashio a Supervisor API-hoz fordul, ami standalone
+# `docker run` alatt (smoke teszt, CI, lokális build) nem létezik, és az app el sem
+# indulna. Az options.json a Supervisor által írt, hivatalosan dokumentált hely,
+# és már tartalmazza a schema szerinti alapértékeket.
+# Sorrend: (1) már beállított környezeti változó, (2) options.json, (3) alapérték.
+#
+# Az (1) azért kell, mert Supervisor nélkül — docker-compose, CI, smoke teszt —
+# nincs options.json, és a beállításokat a konténer környezete adja. Enélkül a
+# szkript felülírná őket az alapértékekkel, és az add-on a saját gépén keresné
+# a backendet.
+cfg() {
+  local key="$1" fallback="$2" env_name value
+  env_name="$(printf '%s' "${key}" | tr '[:lower:]' '[:upper:]')"
+
+  value="$(printenv "${env_name}" 2>/dev/null || true)"
+  if [ -n "${value}" ]; then
+    printf '%s' "${value}"
+    return
+  fi
+
+  value="$(jq -r --arg k "${key}" '.[$k] // empty' "${CONFIG_PATH}" 2>/dev/null || true)"
+  if [ -z "${value}" ] || [ "${value}" = "null" ]; then
+    value="${fallback}"
+  fi
+  printf '%s' "${value}"
+}
+
+# FIGYELEM: a `LOG_LEVEL` nevet a bashio SAJÁT célra használja (numerikus szint),
+# és a shebangnál töltődik be — tehát még ez előtt a sor előtt. Ha a konténer
+# környezetében `LOG_LEVEL=info` van, a bashio log függvényei "unbound variable"
+# hibával elhasalnak. Ezért a saját szintünket más néven adjuk tovább.
+export ELDERCARE_LOG_LEVEL="$(cfg log_level info)"
+export CLOUD_API_URL="$(cfg cloud_api_url http://localhost:8080)"
+export SEND_RAW_EVENTS="$(cfg send_raw_events false)"
+export SEND_DAILY_FEATURES="$(cfg send_daily_features true)"
+export IMAGE_UPLOAD_MODE="$(cfg image_upload_mode critical_only)"
+export LOCAL_RAW_RETENTION_DAYS="$(cfg local_raw_retention_days 30)"
+
+export DATA_DIR=/data
+export HA_MODE="${HA_MODE:-supervisor}"
+
+# --- MQTT: csak akkor kérdezzük a Supervisort, ha egyáltalán elérhető ---
+if bashio::supervisor.ping 2>/dev/null; then
+  if bashio::services.available "mqtt"; then
+    export MQTT_HOST="$(bashio::services mqtt 'host')"
+    export MQTT_PORT="$(bashio::services mqtt 'port')"
+    export MQTT_USERNAME="$(bashio::services mqtt 'username')"
+    export MQTT_PASSWORD="$(bashio::services mqtt 'password')"
+    bashio::log.info "MQTT available: ${MQTT_HOST}:${MQTT_PORT}"
+  else
+    bashio::log.warning "MQTT unavailable — results will not be published back to Home Assistant."
+  fi
+else
+  bashio::log.warning "Supervisor API unreachable (running standalone?) — skipping MQTT."
+fi
+
+bashio::log.info "ElderCare AI starting (mode=${HA_MODE}, log=${ELDERCARE_LOG_LEVEL})…"
+
+# Az s6 service-ek a gyökérből indulnak, NEM a Dockerfile WORKDIR-jéből —
+# enélkül a `python3 -m app.main` nem találja a modult.
+cd /opt/eldercare || bashio::exit.nok "Az alkalmazás könyvtára hiányzik."
+export PYTHONPATH=/opt/eldercare
+
+# exec: a Python kapja meg a SIGTERM-et, hogy gracefully le tudjon állni
+# (queue flush, WebSocket lezárás). Enélkül az s6 ölné meg a shellt.
+exec python3 -m app.main

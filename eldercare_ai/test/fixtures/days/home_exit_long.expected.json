@@ -1,0 +1,11 @@
+{
+  "file": "home_exit_long.jsonl",
+  "catalog_version": 1,
+  "expected_alert_level": "low",
+  "expected_reasons": [
+    "extended_absence"
+  ],
+  "min_risk_score": 0.3,
+  "max_risk_score": 0.7,
+  "requires_cloud": false
+}

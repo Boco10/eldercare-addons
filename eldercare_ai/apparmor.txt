@@ -1,0 +1,35 @@
+#include <tunables/global>
+
+profile eldercare_ai flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # s6-overlay indítás
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /usr/local/bin/** ix,
+  /run/{s6,s6-rc*,service}/** ix,
+  /package/** ix,
+  /command/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+
+  # Python futtatás
+  /usr/local/lib/python3*/** r,
+  /opt/eldercare/** r,
+
+  # Perzisztens adat — ez az EGYETLEN írható hely
+  /data/** rw,
+  /tmp/** rw,
+
+  # Hálózat: kimenő HTTPS a cloudhoz, WebSocket a Supervisorhoz
+  network inet stream,
+  network inet6 stream,
+
+  # Amit kifejezetten NEM engedünk:
+  deny /proc/sys/** w,
+  deny /sys/** w,
+  deny mount,
+  deny /etc/shadow rwx,
+}

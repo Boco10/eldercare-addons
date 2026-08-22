@@ -1,0 +1,13 @@
+{
+  "file": "late_wakeup.jsonl",
+  "catalog_version": 1,
+  "expected_alert_level": "medium",
+  "expected_reasons": [
+    "late_wakeup",
+    "no_kitchen_activity",
+    "increased_night_activity"
+  ],
+  "min_risk_score": 0.65,
+  "max_risk_score": 0.95,
+  "requires_cloud": false
+}

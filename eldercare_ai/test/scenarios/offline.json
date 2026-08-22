@@ -1,0 +1,13 @@
+{
+  "_comment": "A cloud elérhetetlen. A helyi működésnek élnie kell — ez a projekt alapszabálya (docs/00-PROJECT.md §4).",
+  "log_level": "debug",
+  "cloud_api_url": "http://unreachable.invalid:9999",
+  "learning_period_days": 28,
+  "minimum_data_quality": 0.8,
+  "anomaly_threshold_medium": 0.65,
+  "anomaly_threshold_high": 0.82,
+  "send_raw_events": false,
+  "send_daily_features": true,
+  "image_upload_mode": "critical_only",
+  "local_raw_retention_days": 30
+}

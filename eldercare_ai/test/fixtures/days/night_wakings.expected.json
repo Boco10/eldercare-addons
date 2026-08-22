@@ -1,0 +1,11 @@
+{
+  "file": "night_wakings.jsonl",
+  "catalog_version": 1,
+  "expected_alert_level": "low",
+  "expected_reasons": [
+    "increased_night_activity"
+  ],
+  "min_risk_score": 0.3,
+  "max_risk_score": 0.65,
+  "requires_cloud": false
+}

@@ -1,0 +1,11 @@
+{
+  "file": "low_activity.jsonl",
+  "catalog_version": 1,
+  "expected_alert_level": "medium",
+  "expected_reasons": [
+    "reduced_movement"
+  ],
+  "min_risk_score": 0.6,
+  "max_risk_score": 0.9,
+  "requires_cloud": false
+}
